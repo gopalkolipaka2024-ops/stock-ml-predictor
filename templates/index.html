@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Direction Predictor</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f0f13;
+            color: #e8e8e8;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .card {
+            background: #1a1a24;
+            border: 1px solid #2a2a3a;
+            border-radius: 16px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 480px;
+        }
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: #fff;
+        }
+        .subtitle {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        .input-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+        input {
+            flex: 1;
+            background: #12121a;
+            border: 1px solid #2a2a3a;
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            color: #fff;
+            font-size: 1rem;
+            text-transform: uppercase;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: #5b8af5; }
+        button {
+            background: #5b8af5;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background: #4a79e4; }
+        button:disabled { background: #333; cursor: not-allowed; }
+        .result { display: none; }
+        .direction-badge {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .up   { color: #4ade80; }
+        .down { color: #f87171; }
+        .confidence {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 1.5rem;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .stat {
+            background: #12121a;
+            border: 1px solid #2a2a3a;
+            border-radius: 10px;
+            padding: 0.9rem 1rem;
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 0.3rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .bar-container {
+            background: #12121a;
+            border: 1px solid #2a2a3a;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 0.5rem;
+        }
+        .bar-track {
+            background: #2a2a3a;
+            border-radius: 99px;
+            height: 8px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.6s ease;
+        }
+        .bar-up   { background: #4ade80; }
+        .bar-down { background: #f87171; }
+        .disclaimer {
+            font-size: 0.75rem;
+            color: #444;
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+        .error-msg {
+            background: #2a1a1a;
+            border: 1px solid #5a2a2a;
+            border-radius: 10px;
+            padding: 1rem;
+            color: #f87171;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .loading { color: #5b8af5; font-size: 0.9rem; display: none; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>Stock Direction Predictor</h1>
+    <p class="subtitle">ML model predicting 5-day price direction using technical indicators</p>
+
+    <div class="input-row">
+        <input type="text" id="tickerInput" placeholder="AAPL, MSFT, GOOGL..." maxlength="6" />
+        <button id="predictBtn" onclick="predict()">Predict</button>
+    </div>
+
+    <p class="loading" id="loading">Fetching data and computing features...</p>
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="result" id="result">
+        <div class="direction-badge" id="direction"></div>
+        <div class="confidence" id="confidence"></div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">Current Price</div>
+                <div class="stat-value" id="price"></div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Day Change</div>
+                <div class="stat-value" id="dayChange"></div>
+            </div>
+        </div>
+
+        <div class="bar-container">
+            <div class="bar-label">
+                <span>↓ Down probability</span>
+                <span id="probDown"></span>
+            </div>
+            <div class="bar-track">
+                <div class="bar-fill bar-down" id="barDown"></div>
+            </div>
+        </div>
+
+        <div class="bar-container">
+            <div class="bar-label">
+                <span>↑ Up probability</span>
+                <span id="probUp"></span>
+            </div>
+            <div class="bar-track">
+                <div class="bar-fill bar-up" id="barUp"></div>
+            </div>
+        </div>
+    </div>
+
+    <p class="disclaimer">For educational purposes only. Not financial advice.</p>
+</div>
+
+<script>
+    document.getElementById('tickerInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') predict();
+    });
+
+    async function predict() {
+        const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+        if (!ticker) return;
+
+        document.getElementById('predictBtn').disabled = true;
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('result').style.display = 'none';
+        document.getElementById('errorMsg').style.display = 'none';
+
+        try {
+            const res  = await fetch(`/predict?ticker=${ticker}`);
+            const data = await res.json();
+
+            if (data.error) {
+                document.getElementById('errorMsg').textContent = data.error;
+                document.getElementById('errorMsg').style.display = 'block';
+            } else {
+                const isUp = data.is_up;
+                document.getElementById('direction').textContent  = `${data.ticker} — ${data.direction}`;
+                document.getElementById('direction').className    = `direction-badge ${isUp ? 'up' : 'down'}`;
+                document.getElementById('confidence').textContent = `Model confidence: ${data.confidence.toFixed(1)}%`;
+                document.getElementById('price').textContent      = `$${data.current_price}`;
+
+                const change = data.day_change;
+                const changeEl = document.getElementById('dayChange');
+                changeEl.textContent = `${change > 0 ? '+' : ''}${change}%`;
+                changeEl.style.color = change >= 0 ? '#4ade80' : '#f87171';
+
+                document.getElementById('probDown').textContent   = `${data.prob_down}%`;
+                document.getElementById('probUp').textContent     = `${data.prob_up}%`;
+                document.getElementById('barDown').style.width    = `${data.prob_down}%`;
+                document.getElementById('barUp').style.width      = `${data.prob_up}%`;
+
+                document.getElementById('result').style.display = 'block';
+            }
+        } catch (e) {
+            document.getElementById('errorMsg').textContent = 'Server error. Make sure the API is running.';
+            document.getElementById('errorMsg').style.display = 'block';
+        }
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('predictBtn').disabled = false;
+    }
+</script>
+</body>
+</html>
