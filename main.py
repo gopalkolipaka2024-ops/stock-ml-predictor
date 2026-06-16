@@ -10,8 +10,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # ── Setup ──────────────────────────────────────────────────────────
-BASE_DIR = r'C:\Users\Gopal Kolipaka\stock-ml-project'
-os.chdir(BASE_DIR)
+
 
 app       = FastAPI(title="Stock Direction Predictor")
 templates = Jinja2Templates(directory="templates")
