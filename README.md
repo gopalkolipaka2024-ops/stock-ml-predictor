@@ -3,7 +3,7 @@
 An end-to-end machine learning system that predicts 5-day stock price direction using technical indicators and NLP sentiment analysis.
 
 ## Live Demo
-Run locally with `uvicorn main:app --reload` and visit `http://127.0.0.1:8000`
+🔗 **Live demo:** https://stock-ml-predictor.onrender.com
 
 ## What it does
 - Fetches live stock data via yfinance
